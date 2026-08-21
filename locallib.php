@@ -163,7 +163,7 @@ class securepdf {
         $cache = cache::make('mod_securepdf', 'pages');
         $numpages = $cache->get($cmid);
         if ($numpages) {
-            for ($i = 0; $i++; $i < $numpages) {
+            for ($i = 0; $i < $numpages; $i++) {
                 $cache->delete($cmid . '_' . $i);
             }
             $cache->delete($cmid);
@@ -221,7 +221,7 @@ class securepdf {
         $cache = cache::make('mod_securepdf', 'pages');
         $numpages = $cache->get($cmid);
         if ($numpages) {
-            for ($i = 0; $i++; $i < $numpages) {
+            for ($i = 0; $i < $numpages; $i++) {
                 $cache->delete($cmid . '_' . $i);
             }
             $cache->delete($cmid);

@@ -72,14 +72,13 @@ if ($onepageview) {
     $cached = \mod_securepdf\view::checkcache($cm, 0);
     $numpages = $cached['numpages'];
     if ($numpages === false) { // No cache - Get page num only.
+        $adhoccache = new \mod_securepdf\task\create_cache();
+        $adhoccache->set_custom_data(['moduleid' => $cm->id]);
+        \core\task\manager::queue_adhoc_task($adhoccache);
+
         echo '<br><br>' . get_string('nocacheyet', 'mod_securepdf');
         
-        if ($counter < 10) {
-            $PAGE->requires->js_call_amd('mod_securepdf/reload', 'init', ['counter']);
-        } else if ($counter < 11) {
-            $adhoccache = new \mod_securepdf\task\create_cache();
-            $adhoccache->set_custom_data(['moduleid' => $cm->id]);
-            \core\task\manager::queue_adhoc_task($adhoccache);
+        if ($counter < 20) {
             $PAGE->requires->js_call_amd('mod_securepdf/reload', 'init', ['counter']);
         } else {
             echo '<br><br>' . get_string('nocache', 'mod_securepdf');
@@ -149,15 +148,14 @@ if ($onepageview) {
     if ($numpages === false || ($numpages > 0 && $data === false)) {
         \core\session\manager::write_close();
         
+        $adhoccache = new \mod_securepdf\task\create_cache();
+        $adhoccache->set_custom_data(['moduleid' => $cm->id]);
+        \core\task\manager::queue_adhoc_task($adhoccache);
+
         echo $OUTPUT->header();
         echo '<br><br>' . get_string('nocacheyet', 'mod_securepdf');
         
-        if ($counter < 10) {
-            $PAGE->requires->js_call_amd('mod_securepdf/reload', 'init', ['counter']);
-        } else if ($counter < 11) {
-            $adhoccache = new \mod_securepdf\task\create_cache();
-            $adhoccache->set_custom_data(['moduleid' => $cm->id]);
-            \core\task\manager::queue_adhoc_task($adhoccache);
+        if ($counter < 20) {
             $PAGE->requires->js_call_amd('mod_securepdf/reload', 'init', ['counter']);
         } else {
             echo '<br><br>' . get_string('nocache', 'mod_securepdf');
