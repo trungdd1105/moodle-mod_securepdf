@@ -64,6 +64,5 @@ header('Content-Description: File Transfer');
 echo $pdfcontent;
 // Close the connection to the database.
 $DB->close();
-// Close the connection to the file storage.
-$fs->close();
+
 

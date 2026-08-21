@@ -71,15 +71,22 @@ if ($onepageview) {
 
     $cached = \mod_securepdf\view::checkcache($cm, 0);
     $numpages = $cached['numpages'];
-    if (!$numpages) { // No cache - Get page num only.
+    if ($numpages === false) { // No cache - Get page num only.
         echo '<br><br>' . get_string('nocacheyet', 'mod_securepdf');
-        // Refresh every minutes.
-        $PAGE->requires->js_call_amd('mod_securepdf/reload', 'init', ['counter']);
-        // Adhoc task for generating the cache of all pages
-        // This situation happen while cache was purged
-        $adhoccache = new \mod_securepdf\task\create_cache();
-        $adhoccache->set_custom_data(['moduleid' => $cm->id]);
-        \core\task\manager::queue_adhoc_task($adhoccache);
+        
+        if ($counter < 10) {
+            $PAGE->requires->js_call_amd('mod_securepdf/reload', 'init', ['counter']);
+        } else if ($counter < 11) {
+            $adhoccache = new \mod_securepdf\task\create_cache();
+            $adhoccache->set_custom_data(['moduleid' => $cm->id]);
+            \core\task\manager::queue_adhoc_task($adhoccache);
+            $PAGE->requires->js_call_amd('mod_securepdf/reload', 'init', ['counter']);
+        } else {
+            echo '<br><br>' . get_string('nocache', 'mod_securepdf');
+        }
+        
+        echo $OUTPUT->footer();
+        die();
     } else {
         for ($i = 0; $i < $numpages; $i++) {
             $page = $i;
@@ -139,22 +146,25 @@ if ($onepageview) {
     $numpages = $cached['numpages'];
 
     // If there is no cache - we should parse the PDF and write cache.
-    if (!$data || !$numpages) {
+    if ($numpages === false || ($numpages > 0 && $data === false)) {
         \core\session\manager::write_close();
-        // First call the adhoc task for generating the cache of all pages
-        // This situation happen while cache was purged
-        // otherwise the cache is created on create/update resource.
-        $adhoccache = new \mod_securepdf\task\create_cache();
-        $adhoccache->set_custom_data(['moduleid' => $cm->id]);
-        \core\task\manager::queue_adhoc_task($adhoccache);
-
-        $numpagesdata = \mod_securepdf\view::getnumpages($context, $settings->resolution, $cm, $page);
-        $numpages = $numpagesdata['numpages'];
-        $base64 = $numpagesdata['data'];
-
-        if ($page > $numpages) {
-            $error = get_string('nosuchpage', 'mod_securepdf');
+        
+        echo $OUTPUT->header();
+        echo '<br><br>' . get_string('nocacheyet', 'mod_securepdf');
+        
+        if ($counter < 10) {
+            $PAGE->requires->js_call_amd('mod_securepdf/reload', 'init', ['counter']);
+        } else if ($counter < 11) {
+            $adhoccache = new \mod_securepdf\task\create_cache();
+            $adhoccache->set_custom_data(['moduleid' => $cm->id]);
+            \core\task\manager::queue_adhoc_task($adhoccache);
+            $PAGE->requires->js_call_amd('mod_securepdf/reload', 'init', ['counter']);
+        } else {
+            echo '<br><br>' . get_string('nocache', 'mod_securepdf');
         }
+        
+        echo $OUTPUT->footer();
+        die();
     } else {
         // Get image from cache.
         $base64 = $data;

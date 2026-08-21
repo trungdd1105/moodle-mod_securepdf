@@ -13,10 +13,10 @@ define(['jquery'], function($) {
             // Update the "counter" parameter in the URL.
             url.searchParams.set(counterParam, counter);
 
-            // Reload the page with the updated URL after 60 seconds.
+            // Reload the page with the updated URL after 5 seconds.
             setTimeout(function() {
                 window.location.href = url.toString();
-            }, 60000); // 60000 milliseconds = 60 seconds
+            }, 5000); // 5000 milliseconds = 5 seconds
         }
     };
 });

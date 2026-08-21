@@ -37,32 +37,50 @@ class create_cache extends \core\task\adhoc_task
         $context = \context_module::instance($moduleid);
         $fs = get_file_storage();
         $files = $fs->get_area_files($context->id, 'mod_securepdf', 'content', 0, 'sortorder', false);
-        foreach ($files as $file) {
-            $content = $file->get_content();
+        $file = null;
+        foreach ($files as $f) {
+            if (!$f->is_directory()) {
+                $file = $f;
+                break;
+            }
         }
-
-        // Init imagick object.
-        $im = new \imagick();
+        
+        if (!$file) {
+            return;
+        }
 
         $settings = get_config('securepdf');
-        $im->setResolution($settings->resolution, $settings->resolution);
-        try {
-            $im->readImageBlob($content);
-        } catch (Exception $e) {
-            echo '[mod_securepdf]' . $e . "\n";
-        }
-        $numpages = $im->getNumberImages();
-        $result = $cache->set($moduleid, $numpages);
+        $resolution = !empty($settings->resolution) ? $settings->resolution : 150;
 
-        for ($page = 0; $page < $numpages; $page++) {
-            echo '[mod_securepdf] Caching page ' . $page . ' of module ' . $moduleid . "\n";
-            $im->setIteratorIndex($page);
-            $im->setImageFormat('jpeg');
-            $im->setImageAlphaChannel(\Imagick::VIRTUALPIXELMETHOD_WHITE);
-            $img = $im->getImageBlob();
-            $base64 = base64_encode($img);
-            $result = $cache->set($moduleid . '_' . $page, $base64);
+        $tmpdir = make_request_directory();
+        $tmpfname = $tmpdir . '/document.pdf';
+        
+        $file->copy_content_to($tmpfname);
+
+        $out_pattern = $tmpdir . '/page_%d.jpg';
+        $gs_path = file_exists('/usr/bin/gs') ? '/usr/bin/gs' : (file_exists('/usr/local/bin/gs') ? '/usr/local/bin/gs' : 'gs');
+        
+        $gs_cmd = $gs_path . " -dSAFER -dBATCH -dNOPAUSE -dNumRenderingThreads=4 -sDEVICE=jpeg -dJPEGQ=85 -r{$resolution} -sOutputFile=" . escapeshellarg($out_pattern) . " -q -f " . escapeshellarg($tmpfname) . " 2>&1";
+        
+        exec($gs_cmd, $output, $return_var);
+        if ($return_var !== 0) {
+            echo "[mod_securepdf] Ghostscript failed (code $return_var): \n" . implode("\n", $output) . "\n";
         }
-        $im->destroy();
+
+        $page = 0;
+        while (file_exists($tmpdir . '/page_' . ($page + 1) . '.jpg')) {
+            echo '[mod_securepdf] Caching page ' . $page . ' of module ' . $moduleid . "\n";
+            $img = file_get_contents($tmpdir . '/page_' . ($page + 1) . '.jpg');
+            $base64 = base64_encode($img);
+            $cache->set($moduleid . '_' . $page, $base64);
+            unlink($tmpdir . '/page_' . ($page + 1) . '.jpg');
+            $page++;
+        }
+        
+        $cache->set($moduleid, $page);
+
+        if (file_exists($tmpfname)) {
+            unlink($tmpfname);
+        }
     }
 }
