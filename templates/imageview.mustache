@@ -6,7 +6,7 @@
 {{/previous}}
 
 {{#pages}}
-   <a href="{{url}}">  {{page}}  </a>
+   <a href="{{url}}" class="{{#is_read}}page-read{{/is_read}} {{^is_read}}page-unread{{/is_read}}">  {{page}}  </a>
 {{/pages}}
 
 {{#next}}

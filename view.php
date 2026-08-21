@@ -140,6 +140,7 @@ if ($onepageview) {
 
     // If there is no cache - we should parse the PDF and write cache.
     if (!$data || !$numpages) {
+        \core\session\manager::write_close();
         // First call the adhoc task for generating the cache of all pages
         // This situation happen while cache was purged
         // otherwise the cache is created on create/update resource.
@@ -149,7 +150,7 @@ if ($onepageview) {
 
         $numpagesdata = \mod_securepdf\view::getnumpages($context, $settings->resolution, $cm, $page);
         $numpages = $numpagesdata['numpages'];
-        $bas64 = $numpagesdata['data'];
+        $base64 = $numpagesdata['data'];
 
         if ($page > $numpages) {
             $error = get_string('nosuchpage', 'mod_securepdf');
@@ -179,10 +180,23 @@ if ($onepageview) {
         echo html_writer::link($downloadurl, $icon . ' ' . get_string('downloadpdf', 'mod_securepdf'), ['target' => '_blank']);
     }
 
+    $viewed_records = $DB->get_records('securepdf_pageviews', ['module' => $cm->id, 'userid' => $USER->id]);
+    $viewed_pages = [];
+    foreach ($viewed_records as $record) {
+        $viewed_pages[] = $record->page;
+    }
+
     $pages = [];
     for ($i = 0; $i < $numpages; $i++) {
         $pages[$i]['url'] = $CFG->wwwroot . '/mod/securepdf/view.php?id=' . $id . '&page=' . $i;
         $pages[$i]['page'] = $i + 1;
+        
+        // Gắn cờ (flag) true/false để đẩy ra giao diện
+        if (in_array($i, $viewed_pages)) {
+            $pages[$i]['is_read'] = true;
+        } else {
+            $pages[$i]['is_read'] = false;
+        }
     }
 
     $next = 0;

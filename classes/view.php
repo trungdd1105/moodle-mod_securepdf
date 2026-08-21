@@ -54,41 +54,111 @@ class view {
      * @param int $page
      * @return array
      */
-    public static function getnumpages($context, $resolution, $cm, $page = 0) {
+    // public static function getnumpages($context, $resolution, $cm, $page = -1) {
+    //     $fs = get_file_storage();
+    //     $files = $fs->get_area_files($context->id, 'mod_securepdf', 'content', 0, 'sortorder', false);
+    //     foreach ($files as $file) {
+    //         $content = $file->get_content();
+    //     }
+
+    //     $im = new \imagick();
+    //     $im->setResolution($resolution, $resolution);
+    //     try {
+    //         $im->readImageBlob($content);
+    //     } catch (Exception $e) {
+    //         echo $OUTPUT->header();
+    //         \core\notification::error(get_string('imagick_pdf_policy', 'mod_securepdf'));
+    //         echo $e;
+    //         echo $OUTPUT->footer();
+    //         die();
+    //     }
+    //     $numpages = $im->getNumberImages();
+    //     // Cache the number of pages.
+    //     $cache = \cache::make('mod_securepdf', 'pages');
+    //     $result = $cache->set($cm->id, $numpages);
+
+    //     $base64 = '';
+
+    //     if ($page >= 0) {
+    //         $im->setIteratorIndex($page);
+    //         $im->setImageFormat('jpeg');
+    //         $im->setImageAlphaChannel(\Imagick::VIRTUALPIXELMETHOD_WHITE);
+    //         $img = $im->getImageBlob();
+    //         $base64 = base64_encode($img);
+    //         // Cache the image.
+    //         $result = $cache->set($cm->id . '_' . $page, $base64);
+    //     } 
+    //     $im->destroy();
+    //     return ['numpages' => $numpages, 'data' => $base64];
+    // }
+    public static function getnumpages($context, $resolution, $cm, $page = -1) {
+        global $OUTPUT;
+
+        // 1. LẤY SỐ TRANG TỪ CACHE TRƯỚC (Để không phải đếm lại ở mỗi lần chuyển trang)
+        $cache = \cache::make('mod_securepdf', 'pages');
+        $numpages = $cache->get($cm->id);
+
         $fs = get_file_storage();
         $files = $fs->get_area_files($context->id, 'mod_securepdf', 'content', 0, 'sortorder', false);
-        foreach ($files as $file) {
-            $content = $file->get_content();
+        $file = null;
+        foreach ($files as $f) {
+            if (!$f->is_directory()) {
+                $file = $f;
+                break;
+            }
+        }
+        
+        if (!$file) {
+            return ['numpages' => 0, 'data' => ''];
         }
 
-        $im = new \imagick();
-        $im->setResolution($resolution, $resolution);
-        try {
-            $im->readImageBlob($content);
-        } catch (Exception $e) {
-            echo $OUTPUT->header();
-            \core\notification::error(get_string('imagick_pdf_policy', 'mod_securepdf'));
-            echo $e;
-            echo $OUTPUT->footer();
-            die();
-        }
-        $numpages = $im->getNumberImages();
-        // Cache the number of pages.
-        $cache = \cache::make('mod_securepdf', 'pages');
-        $result = $cache->set($cm->id, $numpages);
+        $tmpdir = make_request_directory();
+        $tmpfname = $tmpdir . '/document.pdf';
+        
+        // 2. CHÉP FILE BẰNG STREAM (Không nạp PDF vào RAM, giảm lập tức 3 giây load)
+        $file->copy_content_to($tmpfname);
 
         $base64 = '';
 
-        if ($page > 0) {
-            $im->setIteratorIndex($page);
-            $im->setImageFormat('jpeg');
-            $im->setImageAlphaChannel(\Imagick::VIRTUALPIXELMETHOD_WHITE);
-            $img = $im->getImageBlob();
-            $base64 = base64_encode($img);
-            // Cache the image.
-            $result = $cache->set($cm->id . '_' . $page, $base64);
-        } 
-        $im->destroy();
+        try {
+            // 3. CHỈ ĐẾM SỐ TRANG NẾU CHƯA TỪNG ĐẾM (Triệt tiêu 8 giây lãng phí)
+            if (empty($numpages)) {
+                $im = new \imagick();
+                $im->pingImage($tmpfname);
+                $numpages = $im->getNumberImages();
+                $im->clear();
+                $im->destroy();
+                $cache->set($cm->id, $numpages);
+            }
+
+            // 4. GỌI GHOSTSCRIPT RENDER ĐÚNG 1 TRANG ĐƯỢC YÊU CẦU
+            if ($page >= 0 && $page < $numpages) {
+                $out_img = $tmpdir . '/page.jpg';
+                $actual_page = $page + 1; 
+                
+                $gs_cmd = "/usr/bin/gs -dSAFER -dBATCH -dNOPAUSE -dNumRenderingThreads=4 -sDEVICE=jpeg -dJPEGQ=85 -r{$resolution} -dFirstPage={$actual_page} -dLastPage={$actual_page} -sOutputFile=" . escapeshellarg($out_img) . " -q -f " . escapeshellarg($tmpfname);
+                
+                exec($gs_cmd);
+                
+                if (file_exists($out_img)) {
+                    $base64 = base64_encode(file_get_contents($out_img));
+                    $cache->set($cm->id . '_' . $page, $base64);
+                    unlink($out_img); 
+                }
+            }
+        } catch (\Exception $e) {
+            if (file_exists($tmpfname)) { unlink($tmpfname); }
+            echo $OUTPUT->header();
+            echo "<div class='alert alert-danger'>Chi tiết lỗi đồ họa: " . $e->getMessage() . "</div>";
+            echo $OUTPUT->footer();
+            die();
+        }
+
+        // Dọn dẹp ổ cứng
+        if (file_exists($tmpfname)) { 
+            unlink($tmpfname); 
+        }
+        
         return ['numpages' => $numpages, 'data' => $base64];
     }
     /**
