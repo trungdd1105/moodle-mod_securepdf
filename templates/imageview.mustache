@@ -1,3 +1,11 @@
+{{#is_first_view}}
+<div id="securepdf-countdown-wrapper">
+    <div class="securepdf-countdown-container">
+        <div id="securepdf-countdown-bar" class="securepdf-countdown-bar"></div>
+    </div>
+</div>
+{{/is_first_view}}
+
 <div class=mod_securepdf_pageslinks>
 
 {{#previous}}
@@ -31,3 +39,39 @@
 {{/next}}
 
 </div>
+
+{{#is_first_view}}
+<script>
+    var timeLeft = 5;
+    var timerElem = document.getElementById('securepdf-countdown-text');
+    var barElem = document.getElementById('securepdf-countdown-bar');
+    var wrapper = document.getElementById('securepdf-countdown-wrapper');
+    
+    // Disable pagination links
+    var linksContainers = document.querySelectorAll('.mod_securepdf_pageslinks');
+    linksContainers.forEach(function(el) {
+        el.classList.add('disabled-pagination');
+    });
+
+    // Start progress bar animation
+    setTimeout(function() {
+        if(barElem) barElem.style.width = '100%';
+    }, 50);
+
+    var timer = setInterval(function() {
+        timeLeft--;
+        if (timeLeft > 0) {
+            if(timerElem) timerElem.innerText = timeLeft;
+        } else {
+            clearInterval(timer);
+            // Hide the countdown but keep the space
+            if(wrapper) wrapper.style.visibility = 'hidden';
+            
+            // Enable pagination links
+            linksContainers.forEach(function(el) {
+                el.classList.remove('disabled-pagination');
+            });
+        }
+    }, 1000);
+</script>
+{{/is_first_view}}

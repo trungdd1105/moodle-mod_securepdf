@@ -123,6 +123,7 @@ if ($onepageview) {
                 'page' => $page
                 ];
     $exist = $DB->get_record('securepdf_pageviews', $pageview);
+    $is_first_view = false;
     if ($exist) {
         $pageview['timemodified'] = time();
         $pageview['id'] = $exist->id;
@@ -131,6 +132,7 @@ if ($onepageview) {
         $pageview['timemodified'] = time();
         $pageview['timecreated'] = time();
         $DB->insert_record('securepdf_pageviews', $pageview);
+        $is_first_view = true;
     }
 
     $event = \mod_securepdf\event\page_view::create(array(
@@ -227,7 +229,8 @@ if ($onepageview) {
             'next' => $next,
             'previous' => $page,
             'nexturl' => $nexturl,
-            'previousurl' => $previousurl
+            'previousurl' => $previousurl,
+            'is_first_view' => $is_first_view
             ]);
 }
 
