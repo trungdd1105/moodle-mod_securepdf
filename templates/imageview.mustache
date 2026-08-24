@@ -75,3 +75,22 @@
     }, 1000);
 </script>
 {{/is_first_view}}
+
+<script>
+document.addEventListener('keydown', function(e) {
+    // Không cho phép chuyển trang nếu pagination đang bị disable (do đếm ngược)
+    if (document.querySelector('.mod_securepdf_pageslinks.disabled-pagination')) {
+        return;
+    }
+
+    if (e.key === 'ArrowRight' || e.keyCode === 39) {
+        {{#next}}
+        window.location.href = "{{{nexturl}}}";
+        {{/next}}
+    } else if (e.key === 'ArrowLeft' || e.keyCode === 37) {
+        {{#previous}}
+        window.location.href = "{{{previousurl}}}";
+        {{/previous}}
+    }
+});
+</script>
