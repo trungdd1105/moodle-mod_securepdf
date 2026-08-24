@@ -198,6 +198,7 @@ if ($onepageview) {
     for ($i = 0; $i < $numpages; $i++) {
         $pages[$i]['url'] = $CFG->wwwroot . '/mod/securepdf/view.php?id=' . $id . '&page=' . $i;
         $pages[$i]['page'] = $i + 1;
+        $pages[$i]['is_current'] = ($i == $page);
         
         // Gắn cờ (flag) true/false để đẩy ra giao diện
         if (in_array($i, $viewed_pages)) {

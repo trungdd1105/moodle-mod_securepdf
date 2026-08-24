@@ -5,6 +5,13 @@
 
 .mod_securepdf_pageslinks a {
     margin-left: 3px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mod_securepdf_pageslinks .is-current {
+    background-color: #FFDF00
 }
 
 .mod_securepdf_slide {
