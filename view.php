@@ -56,6 +56,9 @@ if (!securepdf::check_imagick()) {
 // Check if we want all pages in one long page.
 // Get data from securepdf table.
 $securepdfdata = $DB->get_record('securepdf', array('id' => $securepdf->get_instance()->id), '*', MUST_EXIST);
+$title = format_string($securepdfdata->name);
+$PAGE->set_title($title);
+$PAGE->set_heading(format_string($course->fullname));
 $onepageview = $securepdfdata->onepageview;
 if ($onepageview) {
     echo $OUTPUT->header();
@@ -77,13 +80,13 @@ if ($onepageview) {
         \core\task\manager::queue_adhoc_task($adhoccache);
 
         echo '<br><br>' . get_string('nocacheyet', 'mod_securepdf');
-        
+
         if ($counter < 20) {
             $PAGE->requires->js_call_amd('mod_securepdf/reload', 'init', ['counter']);
         } else {
             echo '<br><br>' . get_string('nocache', 'mod_securepdf');
         }
-        
+
         echo $OUTPUT->footer();
         die();
     } else {
@@ -108,20 +111,24 @@ if ($onepageview) {
             }
             // Add watermark to image.
             $data = \mod_securepdf\view::addwatermark($data, $settings);
-            echo $OUTPUT->render_from_template('mod_securepdf/singleformulti',
-            [   'base64' => $data,
-                'page' => $page,
-            ]);
+            echo $OUTPUT->render_from_template(
+                'mod_securepdf/singleformulti',
+                [
+                    'base64' => $data,
+                    'page' => $page,
+                ]
+            );
         }
     }
 } else {
     // Each slide is shown in a separate page.
 
     // Update page views in table - in order to be able to set completion.
-    $pageview = ['module' => $cm->id,
-                'userid' => $USER->id,
-                'page' => $page
-                ];
+    $pageview = [
+        'module' => $cm->id,
+        'userid' => $USER->id,
+        'page' => $page
+    ];
     $exist = $DB->get_record('securepdf_pageviews', $pageview);
     $is_first_view = false;
     if ($exist) {
@@ -149,20 +156,20 @@ if ($onepageview) {
     // If there is no cache - we should parse the PDF and write cache.
     if ($numpages === false || ($numpages > 0 && $data === false)) {
         \core\session\manager::write_close();
-        
+
         $adhoccache = new \mod_securepdf\task\create_cache();
         $adhoccache->set_custom_data(['moduleid' => $cm->id]);
         \core\task\manager::queue_adhoc_task($adhoccache);
 
         echo $OUTPUT->header();
         echo '<br><br>' . get_string('nocacheyet', 'mod_securepdf');
-        
+
         if ($counter < 20) {
             $PAGE->requires->js_call_amd('mod_securepdf/reload', 'init', ['counter']);
         } else {
             echo '<br><br>' . get_string('nocache', 'mod_securepdf');
         }
-        
+
         echo $OUTPUT->footer();
         die();
     } else {
@@ -201,7 +208,7 @@ if ($onepageview) {
         $pages[$i]['url'] = $CFG->wwwroot . '/mod/securepdf/view.php?id=' . $id . '&page=' . $i;
         $pages[$i]['page'] = $i + 1;
         $pages[$i]['is_current'] = ($i == $page);
-        
+
         // Gắn cờ (flag) true/false để đẩy ra giao diện
         if (in_array($i, $viewed_pages)) {
             $pages[$i]['is_read'] = true;
@@ -221,8 +228,10 @@ if ($onepageview) {
     // Add watermark to image.
     $base64 = \mod_securepdf\view::addwatermark($base64, $settings);
 
-    echo $OUTPUT->render_from_template('mod_securepdf/imageview',
-        [   'base64' => $base64,
+    echo $OUTPUT->render_from_template(
+        'mod_securepdf/imageview',
+        [
+            'base64' => $base64,
             'page' => $page + 1,
             'total' => $numpages,
             'pages' => $pages,
@@ -231,7 +240,8 @@ if ($onepageview) {
             'nexturl' => $nexturl,
             'previousurl' => $previousurl,
             'is_first_view' => $is_first_view
-            ]);
+        ]
+    );
 }
 
 echo $OUTPUT->footer();
